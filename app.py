@@ -55,12 +55,12 @@ def analyze_image_quality(image_path, sharpness_threshold=100.0, brightness_thre
         
         # النتائج
         results = {
-            "sharpness": {"value": laplacian_var, "ok": sharpness_ok},
-            "brightness": {"value": brightness, "ok": brightness_ok},
-            "resolution": {"value": (height, width), "ok": resolution_ok},
-            "noise": {"value": noise_level, "ok": noise_ok},
-            "format": {"value": img_format, "ok": format_ok},
-            "overall": sharpness_ok and brightness_ok and resolution_ok and noise_ok and format_ok,
+            "sharpness": {"value": laplacian_var, "ok": bool(sharpness_ok)},  # تحويل القيمة إلى bool
+            "brightness": {"value": brightness, "ok": bool(brightness_ok)},  # تحويل القيمة إلى bool
+            "resolution": {"value": (height, width), "ok": bool(resolution_ok)},  # تحويل القيمة إلى bool
+            "noise": {"value": noise_level, "ok": bool(noise_ok)},  # تحويل القيمة إلى bool
+            "format": {"value": img_format, "ok": bool(format_ok)},  # تحويل القيمة إلى bool
+            "overall": bool(sharpness_ok and brightness_ok and resolution_ok and noise_ok and format_ok),  # تحويل القيمة إلى bool
         }
         
         return results
