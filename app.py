@@ -19,7 +19,42 @@ def analyze_image_quality(image_path, sharpness_threshold=100.0, brightness_thre
     laplacian_var = cv2.Laplacian(gray_image, cv2.CV_64F).var()
     sharpness_ok = laplacian_var >= sharpness_threshold
     
-    # --- 2. الإضاءة (السطوع والتباين) ---
+    # --- 2. الإضاءة (السطوع والتباين) ---from flask import Flask, request, jsonify
+import cv2
+import numpy as np
+
+app = Flask(__name__)
+
+@app.route('/upload', methods=['POST'])
+def upload_image():
+    # التحقق من وجود الملف في الطلب
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+
+    file = request.files['file']
+    
+    # التحقق من أن الملف غير فارغ
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    # قراءة الصورة باستخدام OpenCV
+    img = cv2.imdecode(np.frombuffer(file.read(), np.uint8), cv2.IMREAD_COLOR)
+
+    if img is None:
+        return jsonify({'error': 'Invalid image file'}), 400
+    
+    # تنفيذ المعالجة على الصورة (مثلاً فحص الصورة أو عمليات أخرى)
+    # هنا يمكن إضافة أي منطق خاص بك لمعالجة الصورة
+    
+    # على سبيل المثال، نقوم بحفظ الصورة التي تم استلامها (لأغراض تجريبية)
+    cv2.imwrite('uploaded_image.jpg', img)
+
+    return jsonify({'message': 'Image received and processed successfully'}), 200
+
+if __name__ == '__main__':
+    # تشغيل الخادم على جميع العناوين (0.0.0.0) و المنفذ 8080
+    app.run(host='0.0.0.0', port=8080)
+
     brightness = np.mean(gray_image)
     brightness_ok = brightness_threshold[0] <= brightness <= brightness_threshold[1]
     
