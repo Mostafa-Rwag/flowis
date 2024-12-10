@@ -1,44 +1,91 @@
 from flask import Flask, request, jsonify
+import os
 import cv2
 import numpy as np
 from PIL import Image
-import io
 
 app = Flask(__name__)
 
-# دالة لتحليل الصورة (يمكنك إضافة تحليل أكثر تعقيدًا حسب الحاجة)
-def process_image(image_file):
-    # تحويل الصورة إلى صيغة OpenCV
-    img = Image.open(image_file)
-    img = np.array(img)
+# إنشاء مجلد لتخزين الصور إذا لم يكن موجوداً
+UPLOAD_FOLDER = 'uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
-    # تحويل الصورة إلى اللون الرمادي
-    gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    
-    # يمكن إضافة المزيد من العمليات على الصورة هنا (مثل الكشف عن الأشياء أو الأمراض)
-    
-    # إرجاع نتائج معالجة الصورة (هنا كمثال فقط)
-    return gray_img.tolist()  # تحويل الصورة إلى قائمة يمكن إرسالها عبر JSON
+# تحديد المكان الذي سيتم فيه تخزين الملفات المرفوعة
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-@app.route('/process', methods=['POST'])
-def process_image_api():
-    # التحقق من أن الملف تم إرساله
+@app.route('/')
+def index():
+    return "Welcome to the Image Upload and Quality Check API!"
+
+# فحص جودة الصورة
+def analyze_image_quality(image_path, sharpness_threshold=100.0, brightness_threshold=(50, 200), min_resolution=(256, 256)):
+    # قراءة الصورة
+    image = cv2.imread(image_path, cv2.IMREAD_COLOR)
+    if image is None:
+        return {"overall": False, "message": "الصورة غير موجودة أو المسار غير صحيح."}
+    
+    # تحويل الصورة إلى الأبيض والأسود
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+    # --- 1. وضوح الصورة ---
+    laplacian_var = cv2.Laplacian(gray_image, cv2.CV_64F).var()
+    sharpness_ok = laplacian_var >= sharpness_threshold
+    
+    # --- 2. الإضاءة (السطوع والتباين) ---
+    brightness = np.mean(gray_image)
+    brightness_ok = brightness_threshold[0] <= brightness <= brightness_threshold[1]
+    
+    # --- 3. حجم وأبعاد الصورة ---
+    height, width = gray_image.shape
+    resolution_ok = height >= min_resolution[0] and width >= min_resolution[1]
+    
+    # --- 4. التشويش ---
+    noise_level = np.std(gray_image)
+    noise_ok = noise_level < 50  # يمكن تعديل هذه القيمة حسب الحاجة
+    
+    # --- 5. تنسيق الصورة ---
+    try:
+        img_format = Image.open(image_path).format
+        format_ok = img_format.lower() in ["jpeg", "jpg", "png"]
+    except Exception:
+        format_ok = False
+        img_format = "unknown"
+    
+    # النتائج
+    results = {
+        "sharpness": {"value": laplacian_var, "ok": sharpness_ok},
+        "brightness": {"value": brightness, "ok": brightness_ok},
+        "resolution": {"value": (height, width), "ok": resolution_ok},
+        "noise": {"value": noise_level, "ok": noise_ok},
+        "format": {"value": img_format, "ok": format_ok},
+        "overall": sharpness_ok and brightness_ok and resolution_ok and noise_ok and format_ok,
+    }
+    
+    return results
+
+# تعريف مسار رفع الصورة
+@app.route('/upload', methods=['POST'])
+def upload_image():
     if 'file' not in request.files:
-        return jsonify({"error": "No file provided"}), 400
-    
+        return jsonify({"error": "No file part", "files": request.files}), 400
+
     file = request.files['file']
     
-    # التحقق من امتداد الملف (اختياري: تأكد أنه صورة)
     if file.filename == '':
         return jsonify({"error": "No selected file"}), 400
     
-    # معالجة الصورة باستخدام دالة process_image
-    try:
-        result = process_image(file)
-        return jsonify({"processed_image": result}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    # حفظ الملف في المجلد المحدد
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+    file.save(file_path)
+
+    # فحص جودة الصورة
+    results = analyze_image_quality(file_path)
+
+    if not results["overall"]:
+        return jsonify({"error": "الصورة لا تلبي معايير الجودة", "details": results}), 400
+
+    return jsonify({"message": "File uploaded and quality checked successfully", "file_path": file_path, "quality_results": results}), 200
 
 if __name__ == '__main__':
-    # تأكد من أن التطبيق يعمل على جميع العناوين وليس فقط 127.0.0.1
-    app.run(host='0.0.0.0', port=8080, debug=False)
+    app.run(host='0.0.0.0', port=8080)
