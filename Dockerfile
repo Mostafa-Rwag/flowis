@@ -1,23 +1,15 @@
-# نبدأ من صورة Python الرسمية
-FROM python:3.9-slim
+FROM python:3.9
 
-# تثبيت الحزم الأساسية التي تشمل libGL
-RUN apt-get update && \
-    apt-get install -y libgl1-mesa-glx && \
-    rm -rf /var/lib/apt/lists/*
+# تثبيت مكتبة libGL المطلوبة
+RUN apt-get update && apt-get install -y libgl1-mesa-glx
 
-# إعداد المجلد داخل الحاوية
+# نسخ ملف المتطلبات وتثبيت الحزم
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# نسخ التطبيق
+COPY . /app
 WORKDIR /app
-
-# نسخ المتطلبات وتثبيتها
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
-
-# نسخ جميع الملفات الأخرى إلى الحاوية
-COPY . /app/
-
-# تعيين المنفذ 8080 ليتم تشغيل التطبيق عليه
-EXPOSE 8080
 
 # تشغيل التطبيق
 CMD ["python", "app.py"]
