@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-app = Flask(_name_)
+app = Flask(__name__)
 
 # إنشاء مجلد لتخزين الصور إذا لم يكن موجوداً
 UPLOAD_FOLDER = 'uploads'
@@ -94,5 +94,5 @@ def upload_image():
         return jsonify({"error": "Internal server error", "details": str(e)}), 500
 
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)
