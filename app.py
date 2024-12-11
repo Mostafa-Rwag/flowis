@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-app = Flask(__name__)
+app = Flask(_name_)
 
 # إنشاء مجلد لتخزين الصور إذا لم يكن موجوداً
 UPLOAD_FOLDER = 'uploads'
@@ -53,12 +53,6 @@ def analyze_image_quality(image_path, sharpness_threshold=100.0, brightness_thre
             format_ok = False
             img_format = "unknown"
         
-        # --- 6. التحقق من الاهتزاز ---
-        # لحساب التباين لاكتشاف الهزة
-        edges = cv2.Canny(gray_image, 100, 200)
-        num_edges = np.sum(edges)
-        shake_ok = num_edges > 1000  # إذا كان عدد الحواف أكثر من حد معين، يمكن اعتبارها صورة ثابتة
-
         # النتائج
         results = {
             "sharpness": {"value": laplacian_var, "ok": bool(sharpness_ok)},  # تحويل القيمة إلى bool
@@ -66,8 +60,7 @@ def analyze_image_quality(image_path, sharpness_threshold=100.0, brightness_thre
             "resolution": {"value": (height, width), "ok": bool(resolution_ok)},  # تحويل القيمة إلى bool
             "noise": {"value": noise_level, "ok": bool(noise_ok)},  # تحويل القيمة إلى bool
             "format": {"value": img_format, "ok": bool(format_ok)},  # تحويل القيمة إلى bool
-            "shake": {"ok": bool(shake_ok), "num_edges": num_edges},  # تحويل القيمة إلى bool
-            "overall": bool(sharpness_ok and brightness_ok and resolution_ok and noise_ok and format_ok and shake_ok),  # تحويل القيمة إلى bool
+            "overall": bool(sharpness_ok and brightness_ok and resolution_ok and noise_ok and format_ok),  # تحويل القيمة إلى bool
         }
         
         return results
@@ -101,5 +94,5 @@ def upload_image():
         return jsonify({"error": "Internal server error", "details": str(e)}), 500
 
 
-if __name__ == '__main__':
+if _name_ == '_main_':
     app.run(debug=True, host='0.0.0.0', port=8080)
